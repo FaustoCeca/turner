@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+:root {
+  /* Colores de marca: la página pública de cada negocio los sobreescribe. */
+  --brand: #5d5def;
+  --brand-dark: #312f32;
+  --brand-bg: #fcf8ff;
+  --ink: #312f32;
+}
+
+@theme inline {
+  --color-brand: var(--brand);
+  --color-brand-dark: var(--brand-dark);
+  --color-brand-bg: var(--brand-bg);
+  --color-ink: var(--ink);
+  --color-available: #c6f6df;
+  --color-full: #ffc9c9;
+  --color-closed: #d6d6d6;
+  --font-sans: var(--font-ubuntu), ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: #fcf8ff;
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+.brand-soft {
+  background: color-mix(in srgb, var(--brand) 14%, white);
+}
+
+.brand-ring {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand) 30%, white);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-rise {
+  animation: rise 0.18s ease-out;
+}
+
+@keyframes bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.animate-bob {
+  animation: bob 1.2s ease-in-out infinite;
+}
