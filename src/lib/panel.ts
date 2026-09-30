@@ -48,7 +48,7 @@ export async function businessForAction(): Promise<PanelContext> {
 
 export const RESERVED_SLUGS = new Set([
   "api", "login", "registro", "recuperar", "panel", "mis-turnos", "negocio", "pago-simulado",
-  "precios", "ayuda", "legal", "admin", "_next", "static", "favicon.ico", "robots.txt", "sitemap.xml",
+  "precios", "ayuda", "legal", "admin", "cuenta", "_next", "static", "favicon.ico", "robots.txt", "sitemap.xml",
 ]);
 
 export function slugify(value: string): string {

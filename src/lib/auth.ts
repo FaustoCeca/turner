@@ -50,6 +50,12 @@ export async function destroySession(): Promise<void> {
   jar.delete(COOKIE);
 }
 
+/** Id (hash) de la sesión actual, para cerrar las demás al cambiar la contraseña. */
+export async function currentSessionId(): Promise<string | null> {
+  const token = (await cookies()).get(COOKIE)?.value;
+  return token ? sha256(token) : null;
+}
+
 /** Usuario de la sesión actual (memoizado por request). */
 export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
   const jar = await cookies();

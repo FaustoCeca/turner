@@ -25,7 +25,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   const { slug } = await params;
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Iniciá sesión para reservar" }, { status: 401 });
-  if (!rateLimit(`booking:${user.id}`, 20, 60 * 60_000)) {
+  if (!(await rateLimit(`booking:${user.id}`, 20, 60 * 60_000))) {
     return NextResponse.json({ error: "Demasiadas reservas seguidas. Probá más tarde." }, { status: 429 });
   }
 

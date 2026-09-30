@@ -28,9 +28,9 @@ let client: SessionUser;
 let ownerId: string;
 let ctx: { slug: string; serviceId: string; proA: string; proB: string; branchId: string; businessId: string };
 
-async function createUser(email: string): Promise<SessionUser> {
-  const [u] = await db.insert(users).values({ email, passwordHash: "x", firstName: "Test", lastName: email }).returning();
-  return { id: u.id, email: u.email, firstName: u.firstName, lastName: u.lastName, phone: null };
+async function createUser(email: string, phone: string | null = "341 555 0000"): Promise<SessionUser> {
+  const [u] = await db.insert(users).values({ email, passwordHash: "x", firstName: "Test", lastName: email, phone }).returning();
+  return { id: u.id, email: u.email, firstName: u.firstName, lastName: u.lastName, phone: u.phone };
 }
 
 const allDay = Array.from({ length: 7 }, () => ({ enabled: true, ranges: [{ start: 8 * 60, end: 20 * 60 }] }));
@@ -41,7 +41,8 @@ beforeAll(async () => {
   ownerId = (await createUser("owner@test.dev")).id;
   const [business] = await db
     .insert(businesses)
-    .values({ slug: "test-biz", name: "Test", ownerId, requireDeposit: true, depositPercent: 50, maxDaysInFuture: 30 })
+    // Sin límite de turnos por cliente: el límite tiene su propio test.
+    .values({ slug: "test-biz", name: "Test", ownerId, requireDeposit: true, depositPercent: 50, maxDaysInFuture: 30, maxActiveBookingsPerClient: 0 })
     .returning();
   const [branch] = await db.insert(branches).values({ businessId: business.id, address: "Calle 1" }).returning();
   const [service] = await db
@@ -156,6 +157,25 @@ describe("reservas y pagos", () => {
     const fresh = after.filter((n) => !before.some((b) => b.id === n.id));
     expect(fresh.map((n) => n.kind).sort()).toEqual(["booking", "cancellation"]);
     expect(fresh.find((n) => n.kind === "booking")?.body).toContain("Seña cobrada");
+  });
+
+  it("no deja reservar sin teléfono (sin emails, es el único canal de contacto)", async () => {
+    const noPhone = await createUser("sin-telefono@test.dev", null);
+    await expect(createOnlineBooking({ slug: ctx.slug, user: noPhone, items: [item(18 * 60)] })).rejects.toThrow(/teléfono/);
+  });
+
+  it("limita los turnos futuros por cliente", async () => {
+    await db.update(businesses).set({ maxActiveBookingsPerClient: 2 }).where(eq(businesses.id, ctx.businessId));
+    const limited = await createUser("limite@test.dev");
+    try {
+      await createOnlineBooking({ slug: ctx.slug, user: limited, items: [item(8 * 60, ctx.proB), item(8 * 60 + 30, ctx.proB)] });
+      await expect(createOnlineBooking({ slug: ctx.slug, user: limited, items: [item(9 * 60, ctx.proB)] })).rejects.toThrow(/máximo/);
+      await expect(
+        createOnlineBooking({ slug: ctx.slug, user: await createUser("limite2@test.dev"), items: [item(10 * 60, ctx.proB), item(10 * 60 + 30, ctx.proB), item(11 * 60, ctx.proB)] }),
+      ).rejects.toThrow(/hasta 2 turnos/);
+    } finally {
+      await db.update(businesses).set({ maxActiveBookingsPerClient: 0 }).where(eq(businesses.id, ctx.businessId));
+    }
   });
 
   it("la ficha de cliente se crea una sola vez", async () => {

@@ -5,7 +5,7 @@ import { useActionState, useState } from "react";
 import { loginAction, registerAction, type AuthState } from "@/app/actions/auth";
 import type { SessionUser } from "@/lib/auth";
 import { RecoveryCodeNotice } from "./recovery-code-notice";
-import { Alert, cn, Field, Input, SubmitButton } from "./ui";
+import { Alert, cn, Field, Input, SubmitButton, ActionForm } from "./ui";
 
 export function AuthForm({
   initialMode = "login",
@@ -69,7 +69,7 @@ export function AuthForm({
       </div>
 
       {mode === "login" ? (
-        <form action={loginFormAction} className="space-y-3">
+        <ActionForm action={loginFormAction} className="space-y-3">
           {next && <input type="hidden" name="next" value={next} />}
           <Field label="Email">
             <Input name="email" type="email" autoComplete="email" placeholder="Ingresá tu email" required />
@@ -84,9 +84,9 @@ export function AuthForm({
               ¿Olvidaste tu contraseña?
             </Link>
           </p>
-        </form>
+        </ActionForm>
       ) : (
-        <form action={registerFormAction} className="space-y-3">
+        <ActionForm action={registerFormAction} className="space-y-3">
           {next && <input type="hidden" name="next" value={next} />}
           <div className="grid grid-cols-2 gap-3">
             <Field label="Nombre">
@@ -99,15 +99,15 @@ export function AuthForm({
           <Field label="Email">
             <Input name="email" type="email" autoComplete="email" required />
           </Field>
-          <Field label="Teléfono (opcional)" hint="Con código de área, para que el negocio te recuerde el turno por WhatsApp">
-            <Input name="phone" type="tel" autoComplete="tel" placeholder="341 123 4567" />
+          <Field label="Teléfono (WhatsApp)" hint="Con código de área. Por acá te avisa el negocio: no enviamos emails.">
+            <Input name="phone" type="tel" autoComplete="tel" placeholder="341 123 4567" required />
           </Field>
           <Field label="Contraseña" hint="Mínimo 8 caracteres">
             <Input name="password" type="password" autoComplete="new-password" minLength={8} required />
           </Field>
           {registerState.error && <Alert>{registerState.error}</Alert>}
           <SubmitButton className="w-full">Crear cuenta</SubmitButton>
-        </form>
+        </ActionForm>
       )}
     </div>
   );

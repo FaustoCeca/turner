@@ -4,7 +4,7 @@ import { Ban, ChevronLeft, ChevronRight, MessageCircle, Plus } from "lucide-reac
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import { FormMessage } from "@/components/panel-ui";
-import { Alert, Avatar, Badge, Button, Checkbox, cn, Field, Input, Modal, Select, SubmitButton, Textarea } from "@/components/ui";
+import { Alert, Avatar, Badge, Button, Checkbox, cn, Field, Input, Modal, Select, SubmitButton, Textarea, ActionForm } from "@/components/ui";
 import type { AppointmentStatus } from "@/db/schema";
 import { minutesToHHMM, type TimeRange } from "@/lib/schedule";
 import { whatsappLink } from "@/lib/whatsapp";
@@ -449,7 +449,7 @@ function AppointmentDetail({
       )}
 
       {mode === "reschedule" && (
-        <form action={rescheduleAction} className="grid grid-cols-2 gap-3 rounded-lg border border-neutral-200 p-3">
+        <ActionForm action={rescheduleAction} className="grid grid-cols-2 gap-3 rounded-lg border border-neutral-200 p-3">
           <input type="hidden" name="id" value={a.id} />
           <Field label="Fecha">
             <Input name="date" type="date" defaultValue={a.date} required />
@@ -478,7 +478,7 @@ function AppointmentDetail({
             </Button>
             <SubmitButton>Guardar</SubmitButton>
           </div>
-        </form>
+        </ActionForm>
       )}
     </div>
   );
@@ -524,7 +524,7 @@ function NewAppointmentForm({
   const visibleResults = query.trim().length >= 2 ? results : [];
 
   return (
-    <form action={action} className="grid gap-3 sm:grid-cols-2">
+    <ActionForm action={action} className="grid gap-3 sm:grid-cols-2">
       <input type="hidden" name="branchId" value={branchId} />
       <Field label="Profesional">
         <Select name="professionalId" value={professionalId} onChange={(e) => setProfessionalId(e.target.value)} required>
@@ -613,6 +613,6 @@ function NewAppointmentForm({
         </Button>
         <SubmitButton disabled={!serviceId}>Agendar turno</SubmitButton>
       </div>
-    </form>
+    </ActionForm>
   );
 }

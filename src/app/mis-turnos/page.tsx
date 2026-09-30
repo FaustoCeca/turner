@@ -11,7 +11,6 @@ import { googleCalendarUrl } from "@/lib/calendar";
 import { formatMoney } from "@/lib/pricing";
 import { formatLongDateTime } from "@/lib/time";
 import { MyAppointmentCard, type MyAppointment } from "./appointment-card";
-import { RecoveryCodeSection } from "./recovery-code-section";
 
 export const metadata: Metadata = { title: "Mis turnos" };
 
@@ -81,6 +80,9 @@ export default async function MyAppointmentsPage() {
             {appName}
           </Link>
           <div className="flex items-center gap-3 text-sm text-white">
+            <Link href="/cuenta" className="rounded-lg px-3 py-1.5 hover:bg-white/10">
+              Mi cuenta
+            </Link>
             {managed.length > 0 && (
               <Link href="/panel" className="rounded-lg bg-white/10 px-3 py-1.5 hover:bg-white/20">
                 Mi negocio
@@ -119,7 +121,6 @@ export default async function MyAppointmentsPage() {
             </div>
           </>
         )}
-        <RecoveryCodeSection />
       </main>
       <SiteFooter />
     </div>

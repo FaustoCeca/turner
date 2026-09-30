@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { FormMessage } from "@/components/panel-ui";
-import { Field, Input, Select, SubmitButton } from "@/components/ui";
+import { Field, Input, Select, SubmitButton, ActionForm } from "@/components/ui";
 import { saveCouponAction, type ActionState } from "../actions";
 
 export function CouponForm() {
@@ -12,7 +12,7 @@ export function CouponForm() {
     if (state.ok) form.current?.reset();
   }, [state]);
   return (
-    <form ref={form} action={action} className="grid grid-cols-2 gap-3">
+    <ActionForm ref={form} action={action} className="grid grid-cols-2 gap-3">
       <Field label="Código" className="col-span-2">
         <Input name="code" placeholder="BIENVENIDA" className="uppercase" required />
       </Field>
@@ -38,6 +38,6 @@ export function CouponForm() {
         <FormMessage state={state} />
       </div>
       <SubmitButton className="col-span-2">Crear cupón</SubmitButton>
-    </form>
+    </ActionForm>
   );
 }

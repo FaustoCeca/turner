@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, X } from "lucide-react";
-import { useEffect, useRef, type ComponentProps, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useTransition, type ComponentProps, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import { cn } from "@/lib/cn";
 
@@ -41,11 +41,39 @@ export function Button({
   );
 }
 
+const PendingContext = createContext(false);
+
+/**
+ * Formulario que envía con una acción (server action / useActionState) SIN vaciar los campos.
+ * Con `<form action>` React 19 resetea los campos al terminar, aunque la respuesta sea un error,
+ * y el usuario pierde lo que escribió.
+ */
+export function ActionForm({
+  action,
+  ...props
+}: Omit<ComponentProps<"form">, "action" | "onSubmit"> & { action: (formData: FormData) => void }) {
+  const [pending, startTransition] = useTransition();
+  return (
+    <PendingContext.Provider value={pending}>
+      <form
+        {...props}
+        onSubmit={(e) => {
+          e.preventDefault();
+          // El botón que envió (name/value) también viaja, igual que con un envío normal.
+          const formData = new FormData(e.currentTarget, (e.nativeEvent as SubmitEvent).submitter);
+          startTransition(() => action(formData));
+        }}
+      />
+    </PendingContext.Provider>
+  );
+}
+
 /** Botón de envío que muestra el estado pendiente del formulario (server actions). */
 export function SubmitButton({ children, ...props }: ComponentProps<typeof Button>) {
   const { pending } = useFormStatus();
+  const actionFormPending = useContext(PendingContext);
   return (
-    <Button type="submit" loading={pending} {...props}>
+    <Button type="submit" loading={pending || actionFormPending} {...props}>
       {children}
     </Button>
   );

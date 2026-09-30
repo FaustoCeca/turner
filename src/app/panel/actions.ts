@@ -11,6 +11,7 @@ import {
   businesses,
   clients,
   coupons,
+  images,
   notifications,
   professionalBranches,
   professionalServices,
@@ -26,6 +27,7 @@ import {
   lockProfessionals,
 } from "@/lib/bookings";
 import { encrypt } from "@/lib/crypto";
+import { IMAGE_PATH, internalImageId, isAcceptableImageUrl, MAX_IMAGE_BYTES, sniffImageType } from "@/lib/images";
 import { businessForAction, isValidSlug, PANEL_BUSINESS_COOKIE, slugify } from "@/lib/panel";
 import { ALL_WEEKDAYS, hhmmToMinutes, normalizeSchedule, type WeekSchedule } from "@/lib/schedule";
 import { getSlotContext, loadBusy } from "@/lib/slots";
@@ -206,7 +208,7 @@ export async function saveProfessionalAction(_prev: ActionState, fd: FormData): 
     const firstName = str(fd, "firstName");
     if (!firstName) return { error: "Ingresá el nombre" };
     const avatarUrl = opt(fd, "avatarUrl");
-    if (avatarUrl && !/^https:\/\//.test(avatarUrl)) return { error: "La foto debe ser una URL https://" };
+    if (avatarUrl && !isAcceptableImageUrl(avatarUrl)) return { error: "Foto inválida" };
 
     const branchRows = await db.select({ id: branches.id }).from(branches).where(eq(branches.businessId, business.id));
     const branchIds = new Set(branchRows.map((b) => b.id));
@@ -241,6 +243,11 @@ export async function saveProfessionalAction(_prev: ActionState, fd: FormData): 
     const savedId = await db.transaction(async (tx) => {
       let proId = id;
       if (id) {
+        const [previous] = await tx
+          .select({ avatarUrl: professionals.avatarUrl })
+          .from(professionals)
+          .where(and(eq(professionals.id, id), eq(professionals.businessId, business.id)));
+        await deleteReplacedImage(tx, business.id, previous?.avatarUrl, avatarUrl);
         const updated = await tx
           .update(professionals)
           .set(values)
@@ -431,7 +438,7 @@ export async function saveGeneralSettingsAction(_prev: ActionState, fd: FormData
       return { error: "Zona horaria inválida" };
     }
     const logoUrl = opt(fd, "logoUrl");
-    if (logoUrl && !/^https:\/\//.test(logoUrl)) return { error: "El logo debe ser una URL https://" };
+    if (logoUrl && !isAcceptableImageUrl(logoUrl)) return { error: "Logo inválido" };
 
     await db
       .update(businesses)
@@ -448,6 +455,7 @@ export async function saveGeneralSettingsAction(_prev: ActionState, fd: FormData
         timezone,
       })
       .where(eq(businesses.id, business.id));
+    await deleteReplacedImage(db, business.id, business.logoUrl, logoUrl);
     revalidatePath("/panel", "layout");
     return { ok: true, message: "Datos guardados" };
   } catch (err) {
@@ -489,6 +497,7 @@ export async function saveBookingSettingsAction(_prev: ActionState, fd: FormData
         minAnticipationMinutes: int(fd, "minAnticipationMinutes", 0, 0, 60 * 24 * 30),
         slotMinutes: [...new Set(slotMinutes)].sort((a, b) => a - b),
         holdMinutes: int(fd, "holdMinutes", 15, 5, 120),
+        maxActiveBookingsPerClient: int(fd, "maxActiveBookingsPerClient", 3, 0, 50),
         minAnticipationEditMinutes: int(fd, "minAnticipationEditMinutes", 0, 0, 60 * 24 * 30),
         maxClientEdits: int(fd, "maxClientEdits", 1, 0, 20),
         requireDeposit: bool(fd, "requireDeposit"),
@@ -514,7 +523,10 @@ export async function saveMpTokenAction(_prev: ActionState, fd: FormData): Promi
     if (!/^(APP_USR|TEST)-[\w-]{20,}$/.test(token)) return { error: "El Access Token no tiene un formato válido" };
     const res = await fetch("https://api.mercadopago.com/users/me", { headers: { Authorization: `Bearer ${token}` } });
     if (!res.ok) return { error: "Mercado Pago rechazó el Access Token" };
-    const me = (await res.json()) as { id: number };
+    // Desde nov. 2025 las credenciales de prueba también empiezan con APP_USR-: la cuenta de prueba
+    // se reconoce por la etiqueta "test_user" que devuelve Mercado Pago.
+    const me = (await res.json()) as { id: number; tags?: string[] };
+    const isTest = token.startsWith("TEST-") || (me.tags ?? []).includes("test_user");
     const db = await getDb();
     await db
       .update(businesses)
@@ -523,7 +535,7 @@ export async function saveMpTokenAction(_prev: ActionState, fd: FormData): Promi
         mpRefreshToken: null,
         mpUserId: String(me.id),
         mpTokenExpiresAt: null,
-        mpLiveMode: token.startsWith("APP_USR"),
+        mpLiveMode: !isTest,
       })
       .where(eq(businesses.id, business.id));
     revalidatePath("/panel/configuracion");
@@ -759,4 +771,30 @@ export async function markReminderSentAction(appointmentId: string): Promise<voi
     .set({ reminderSentAt: new Date() })
     .where(and(eq(appointments.id, appointmentId), eq(appointments.businessId, business.id)));
   revalidatePath("/panel/recordatorios");
+}
+
+/* ───────────── imágenes ───────────── */
+
+/** Borra la imagen subida anterior cuando se reemplaza o se quita. */
+async function deleteReplacedImage(db: Tx | Awaited<ReturnType<typeof getDb>>, businessId: string, previous: string | null | undefined, next: string | null) {
+  const oldId = internalImageId(previous);
+  if (oldId && previous !== next) {
+    await db.delete(images).where(and(eq(images.id, oldId), eq(images.businessId, businessId)));
+  }
+}
+
+export async function uploadImageAction(fd: FormData): Promise<{ url?: string; error?: string }> {
+  const { business } = await businessForAction();
+  const file = fd.get("file");
+  if (!(file instanceof File)) return { error: "No llegó ninguna imagen" };
+  if (file.size > MAX_IMAGE_BYTES) return { error: "La imagen es demasiado pesada" };
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const type = sniffImageType(bytes);
+  if (!type) return { error: "El archivo no es una imagen JPG, PNG o WEBP" };
+  const db = await getDb();
+  const [row] = await db
+    .insert(images)
+    .values({ businessId: business.id, contentType: type, data: Buffer.from(bytes).toString("base64") })
+    .returning({ id: images.id });
+  return { url: `${IMAGE_PATH}${row.id}` };
 }

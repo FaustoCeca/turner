@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { FormMessage } from "@/components/panel-ui";
-import { Field, Input, Select, SubmitButton } from "@/components/ui";
+import { Field, Input, Select, SubmitButton, ActionForm } from "@/components/ui";
 import { createBlockAction, type ActionState } from "./actions";
 
 /** Formulario para bloquear un rango de fechas/horas (todo el negocio o un profesional). */
@@ -26,7 +26,7 @@ export function BlockForm({
   }, {});
 
   return (
-    <form action={action} className="grid gap-3 sm:grid-cols-4">
+    <ActionForm action={action} className="grid gap-3 sm:grid-cols-4">
       {fixedProfessionalId ? (
         <input type="hidden" name="professionalId" value={fixedProfessionalId} />
       ) : (
@@ -76,6 +76,6 @@ export function BlockForm({
       <div className="sm:col-span-4">
         <FormMessage state={state} />
       </div>
-    </form>
+    </ActionForm>
   );
 }

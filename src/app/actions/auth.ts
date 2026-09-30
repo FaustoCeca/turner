@@ -17,6 +17,7 @@ import {
 } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
 import { generateRecoveryCode, hashRecoveryCode, verifyRecoveryCode } from "@/lib/recovery";
+import { isValidPhone } from "@/lib/whatsapp";
 
 export type AuthState = {
   error?: string;
@@ -48,7 +49,7 @@ export async function loginAction(_prev: AuthState, formData: FormData): Promise
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const email = normalizeEmail(parsed.data.email);
 
-  if (!rateLimit(`login:${email}`, 8, 15 * 60_000) || !rateLimit(`login-ip:${await clientIp()}`, 30, 15 * 60_000)) {
+  if (!(await rateLimit(`login:${email}`, 8, 15 * 60_000)) || !(await rateLimit(`login-ip:${await clientIp()}`, 30, 15 * 60_000))) {
     return { error: "Demasiados intentos. Esperá unos minutos y volvé a probar." };
   }
 
@@ -71,12 +72,13 @@ const registerSchema = z.object({
   firstName: z.string().trim().min(1, "Ingresá tu nombre").max(60),
   lastName: z.string().trim().min(1, "Ingresá tu apellido").max(60),
   email: z.email("Ingresá un email válido"),
+  // Sin emails, el teléfono (WhatsApp) es el único canal para avisos y recordatorios: es obligatorio.
   phone: z
-    .string()
+    .string({ error: "Ingresá tu teléfono" })
     .trim()
     .max(30)
     .regex(/^[+\d\s()-]*$/, "Teléfono inválido")
-    .optional(),
+    .refine(isValidPhone, "Ingresá tu teléfono con código de área (ej. 341 555 1234)"),
   password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres").max(200),
 });
 
@@ -85,11 +87,11 @@ export async function registerAction(_prev: AuthState, formData: FormData): Prom
     firstName: formData.get("firstName"),
     lastName: formData.get("lastName"),
     email: formData.get("email"),
-    phone: formData.get("phone") || undefined,
+    phone: formData.get("phone") ?? undefined,
     password: formData.get("password"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
-  if (!rateLimit(`register-ip:${await clientIp()}`, 10, 60 * 60_000)) {
+  if (!(await rateLimit(`register-ip:${await clientIp()}`, 10, 60 * 60_000))) {
     return { error: "Demasiados registros desde esta conexión. Probá más tarde." };
   }
 
@@ -107,7 +109,7 @@ export async function registerAction(_prev: AuthState, formData: FormData): Prom
       recoveryCodeHash: await hashRecoveryCode(recoveryCode),
       firstName: parsed.data.firstName,
       lastName: parsed.data.lastName,
-      phone: parsed.data.phone || null,
+      phone: parsed.data.phone,
     })
     .returning();
   await createSession(user.id);
@@ -136,7 +138,7 @@ export async function resetWithRecoveryCodeAction(_prev: AuthState, formData: Fo
     .safeParse({ email: formData.get("email"), code: formData.get("code"), password: formData.get("password") });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const email = normalizeEmail(parsed.data.email);
-  if (!rateLimit(`recover:${email}`, 5, 15 * 60_000) || !rateLimit(`recover-ip:${await clientIp()}`, 20, 15 * 60_000)) {
+  if (!(await rateLimit(`recover:${email}`, 5, 15 * 60_000)) || !(await rateLimit(`recover-ip:${await clientIp()}`, 20, 15 * 60_000))) {
     return { error: "Demasiados intentos. Esperá unos minutos y volvé a probar." };
   }
 
@@ -160,7 +162,7 @@ export async function resetWithRecoveryCodeAction(_prev: AuthState, formData: Fo
 export async function regenerateRecoveryCodeAction(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const current = await getCurrentUser();
   if (!current) return { error: "Iniciá sesión" };
-  if (!rateLimit(`regen:${current.id}`, 5, 15 * 60_000)) return { error: "Demasiados intentos. Probá más tarde." };
+  if (!(await rateLimit(`regen:${current.id}`, 5, 15 * 60_000))) return { error: "Demasiados intentos. Probá más tarde." };
   const db = await getDb();
   const [user] = await db.select().from(users).where(eq(users.id, current.id)).limit(1);
   if (!user || !(await verifyPassword(String(formData.get("password") ?? ""), user.passwordHash))) {

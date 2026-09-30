@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
+import { ImageUpload } from "@/components/image-upload";
 import { FormMessage, Section, WeekdayPicker } from "@/components/panel-ui";
-import { Checkbox, Field, Input, SubmitButton, Textarea } from "@/components/ui";
+import { Checkbox, Field, Input, SubmitButton, Textarea, ActionForm } from "@/components/ui";
 import type { Professional } from "@/db/schema";
 import { saveProfessionalAction, type ActionState } from "../actions";
 import { ScheduleEditor, type BranchScheduleState } from "./schedule-editor";
@@ -29,7 +30,7 @@ export function ProfessionalForm({
   }, [state, professional, router]);
 
   return (
-    <form action={action} className="space-y-5">
+    <ActionForm action={action} className="space-y-5">
       {professional && <input type="hidden" name="id" value={professional.id} />}
       <Section title="Datos">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -45,9 +46,9 @@ export function ProfessionalForm({
           <Field label="Teléfono">
             <Input name="phone" defaultValue={professional?.phone ?? ""} />
           </Field>
-          <Field label="Foto (URL)" hint="Link https a una imagen cuadrada" className="sm:col-span-2">
-            <Input name="avatarUrl" type="url" defaultValue={professional?.avatarUrl ?? ""} placeholder="https://…" />
-          </Field>
+          <div className="sm:col-span-2">
+            <ImageUpload name="avatarUrl" defaultValue={professional?.avatarUrl ?? null} label="Foto" />
+          </div>
           <Field label="Presentación (opcional)" className="sm:col-span-2">
             <Textarea name="bio" defaultValue={professional?.bio ?? ""} rows={2} />
           </Field>
@@ -88,6 +89,6 @@ export function ProfessionalForm({
       <div className="flex justify-end">
         <SubmitButton>{professional ? "Guardar cambios" : "Crear profesional"}</SubmitButton>
       </div>
-    </form>
+    </ActionForm>
   );
 }

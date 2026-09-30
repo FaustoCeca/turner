@@ -30,6 +30,7 @@ export default async function SettingsPage({ searchParams }: Props) {
           refundMinAnticipationMinutes: business.refundMinAnticipationMinutes,
           slotMinutes: business.slotMinutes,
           holdMinutes: business.holdMinutes,
+          maxActiveBookingsPerClient: business.maxActiveBookingsPerClient,
           depositPercent: business.depositPercent,
           depositMinAmount: business.depositMinAmount,
           mpConnected: Boolean(business.mpAccessToken),

@@ -58,6 +58,15 @@ async function main() {
   await db
     .insert(users)
     .values({ email: "cliente@demo.test", passwordHash: password, recoveryCodeHash, firstName: "Carla", lastName: "Cliente", phone: "+5493411111111" });
+  await db.insert(users).values({
+    email: "admin@demo.test",
+    passwordHash: password,
+    recoveryCodeHash,
+    firstName: "Operador",
+    lastName: "Plataforma",
+    phone: "+5493412222222",
+    isPlatformAdmin: true,
+  });
 
   const [business] = await db
     .insert(businesses)
@@ -132,8 +141,9 @@ async function main() {
   Página de reservas: http://localhost:3000/barberia-demo
   Negocio:  negocio@demo.test / demo1234  → http://localhost:3000/panel
   Cliente:  cliente@demo.test / demo1234
+  Admin:    admin@demo.test / demo1234  → http://localhost:3000/admin
   Cupón:    BIENVENIDA (10%)
-  Código de recuperación de ambas cuentas: ${DEMO_RECOVERY_CODE}`);
+  Código de recuperación de las cuentas demo: ${DEMO_RECOVERY_CODE}`);
   process.exit(0);
 }
 

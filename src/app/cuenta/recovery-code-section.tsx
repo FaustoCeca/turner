@@ -4,15 +4,15 @@ import { KeyRound } from "lucide-react";
 import { useActionState, useState } from "react";
 import { regenerateRecoveryCodeAction, type AuthState } from "@/app/actions/auth";
 import { RecoveryCodeNotice } from "@/components/recovery-code-notice";
-import { Alert, Button, Field, Input, SubmitButton } from "@/components/ui";
+import { Alert, Button, Field, Input, SubmitButton, ActionForm } from "@/components/ui";
 
 /** Genera un código de recuperación nuevo (para quien lo perdió o creó la cuenta antes de que existieran). */
-export function RecoveryCodeSection() {
+export function RecoveryCodeSection({ email }: { email: string }) {
   const [open, setOpen] = useState(false);
   const [state, action] = useActionState<AuthState, FormData>(regenerateRecoveryCodeAction, {});
 
   return (
-    <section className="mt-10 rounded-xl border border-neutral-200 bg-white p-4">
+    <section className="rounded-xl border border-neutral-200 bg-white p-5">
       <h2 className="flex items-center gap-2 font-bold">
         <KeyRound className="size-4" /> Código de recuperación
       </h2>
@@ -24,7 +24,8 @@ export function RecoveryCodeSection() {
           <RecoveryCodeNotice code={state.recoveryCode} />
         </div>
       ) : open ? (
-        <form action={action} className="mt-4 flex flex-wrap items-end gap-2">
+        <ActionForm action={action} className="mt-4 flex flex-wrap items-end gap-2">
+          <input type="email" name="username" autoComplete="username" defaultValue={email} readOnly tabIndex={-1} aria-hidden className="sr-only" />
           <Field label="Tu contraseña actual" className="min-w-56 flex-1">
             <Input name="password" type="password" autoComplete="current-password" required />
           </Field>
@@ -34,7 +35,7 @@ export function RecoveryCodeSection() {
               <Alert>{state.error}</Alert>
             </div>
           )}
-        </form>
+        </ActionForm>
       ) : (
         <Button variant="secondary" className="mt-3" onClick={() => setOpen(true)}>
           Generar un código nuevo

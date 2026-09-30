@@ -49,7 +49,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         <div className="hidden border-t border-white/10 px-4 py-4 text-sm lg:mt-auto lg:block">
           <p className="truncate text-white/80">{user.firstName} {user.lastName}</p>
           <div className="mt-2 flex gap-3 text-xs text-white/60">
-            <Link href="/mis-turnos" className="hover:text-white">Mis turnos</Link>
+            <Link href="/cuenta" className="hover:text-white">Mi cuenta</Link>
             <form action={logoutAction}>
               <button className="hover:text-white">Cerrar sesión</button>
             </form>

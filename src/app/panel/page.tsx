@@ -19,7 +19,7 @@ import { formatMoney } from "@/lib/pricing";
 import { addDays, isValidDateStr, todayIn, utcToZoned, weekdayOf, zonedToUtc } from "@/lib/time";
 import { AgendaView, type AgendaAppointment, type AgendaColumn } from "./agenda-view";
 
-export const metadata: Metadata = { title: "Agenda" };
+export const metadata: Metadata = { title: { absolute: "Agenda | Panel" } };
 
 type Props = { searchParams: Promise<{ fecha?: string; sucursal?: string; bienvenida?: string }> };
 

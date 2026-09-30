@@ -18,10 +18,11 @@ import {
   CircleCheck,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useActionState, useCallback, useEffect, useMemo, useState } from "react";
 import { AuthForm } from "@/components/auth-form";
 import { RecoveryCodeNotice } from "@/components/recovery-code-notice";
-import { Alert, Avatar, Button, Checkbox, cn, Input, Modal } from "@/components/ui";
+import { updateProfileAction, type AccountState } from "@/app/actions/account";
+import { Alert, Avatar, Button, Checkbox, cn, Input, Modal, ActionForm } from "@/components/ui";
 import type { SessionUser } from "@/lib/auth";
 import { formatMoney } from "@/lib/pricing";
 import { formatSlot } from "@/lib/schedule";
@@ -649,7 +650,8 @@ function CheckoutModal({
 
   const deposit = quote?.deposit ?? 0;
   const needsTerms = Boolean(business.termsAndConditions);
-  const canSubmit = Boolean(user) && !recoveryCode && cart.length > 0 && quote !== null && (!needsTerms || acceptTerms);
+  const canSubmit =
+    Boolean(user?.phone) && !recoveryCode && cart.length > 0 && quote !== null && (!needsTerms || acceptTerms);
 
   return (
     <Modal
@@ -771,6 +773,8 @@ function CheckoutModal({
       <div className="mt-6">
         {recoveryCode ? (
           <RecoveryCodeNotice code={recoveryCode} onContinue={onRecoveryDone} continueLabel="Continuar con la reserva" />
+        ) : user && !user.phone ? (
+          <PhonePrompt />
         ) : user ? (
           <p className="rounded-lg bg-neutral-50 px-3 py-2 text-sm">
             Reservando como <b>{user.firstName} {user.lastName}</b> ({user.email})
@@ -791,5 +795,29 @@ function CheckoutModal({
         )}
       </div>
     </Modal>
+  );
+}
+
+/** Cuentas creadas antes de que el teléfono fuera obligatorio: se pide antes de reservar. */
+function PhonePrompt() {
+  const router = useRouter();
+  const [state, action] = useActionState<AccountState, FormData>(async (prev, fd) => {
+    const res = await updateProfileAction(prev, fd);
+    if (res.ok) router.refresh();
+    return res;
+  }, {});
+  return (
+    <ActionForm action={action} className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+      <p className="text-sm">
+        Agregá tu teléfono para que el negocio pueda avisarte por WhatsApp si hay algún cambio en tu turno.
+      </p>
+      <div className="flex gap-2">
+        <Input name="phone" type="tel" autoComplete="tel" placeholder="341 123 4567" aria-label="Teléfono" required />
+        <Button type="submit" variant="dark">
+          Guardar
+        </Button>
+      </div>
+      {state.error && <p className="text-sm text-red-600">{state.error}</p>}
+    </ActionForm>
   );
 }

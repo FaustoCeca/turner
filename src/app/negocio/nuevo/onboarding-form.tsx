@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Alert, Field, Input, Select, SubmitButton } from "@/components/ui";
+import { Alert, Field, Input, Select, SubmitButton, ActionForm } from "@/components/ui";
 import { createBusinessAction, type OnboardingState } from "./actions";
 
 export const CATEGORIES = [
@@ -27,7 +27,7 @@ export function OnboardingForm({ appUrl }: { appUrl: string }) {
   const [slugTouched, setSlugTouched] = useState(false);
 
   return (
-    <form action={action} className="space-y-4">
+    <ActionForm action={action} className="space-y-4">
       <Field label="Nombre del negocio">
         <Input
           name="name"
@@ -75,6 +75,6 @@ export function OnboardingForm({ appUrl }: { appUrl: string }) {
       </Field>
       {state.error && <Alert>{state.error}</Alert>}
       <SubmitButton className="w-full">Crear mi negocio</SubmitButton>
-    </form>
+    </ActionForm>
   );
 }

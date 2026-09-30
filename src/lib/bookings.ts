@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import { and, asc, count, eq, gt, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { getDb, type DbOrTx, type Tx } from "@/db";
 import {
   appointments,
@@ -127,6 +127,38 @@ export async function findValidCoupon(
   return coupon;
 }
 
+/**
+ * Límite de turnos futuros por cliente (evita que alguien llene la agenda con reservas falsas).
+ * Bloquea la ficha del cliente para que dos reservas simultáneas no lo esquiven.
+ */
+async function enforceActiveLimit(tx: Tx, business: Business, clientId: string, adding: number, now: Date) {
+  const max = business.maxActiveBookingsPerClient;
+  if (max <= 0) return;
+  await tx.select({ id: clients.id }).from(clients).where(eq(clients.id, clientId)).for("update");
+  const [row] = await tx
+    .select({ n: count() })
+    .from(appointments)
+    .leftJoin(bookings, eq(bookings.id, appointments.bookingId))
+    .where(
+      and(
+        eq(appointments.clientId, clientId),
+        gt(appointments.startsAt, now),
+        or(
+          eq(appointments.status, "confirmed"),
+          and(eq(appointments.status, "pending_payment"), gt(bookings.holdExpiresAt, now)),
+        ),
+      ),
+    );
+  const active = row?.n ?? 0;
+  if (active + adding > max) {
+    throw new BookingError(
+      active >= max
+        ? `Ya tenés ${active} ${active === 1 ? "turno reservado" : "turnos reservados"} en ${business.name}, que es el máximo. Si necesitás otro, contactá al negocio.`
+        : `Podés tener hasta ${max} turnos reservados a la vez en ${business.name}. Quitá algún servicio del carrito.`,
+    );
+  }
+}
+
 async function upsertClientForUser(tx: DbOrTx, businessId: string, user: SessionUser) {
   const [existing] = await tx
     .select()
@@ -172,6 +204,7 @@ export async function createOnlineBooking(params: {
   const business = await getBusinessBySlug(db, params.slug);
   if (!business || !business.isOnline) throw new BookingError("El negocio no está tomando reservas online");
   if (!params.items.length) throw new BookingError("Agregá al menos un servicio");
+  if (!params.user.phone) throw new BookingError("Agregá tu teléfono para que el negocio pueda contactarte");
   if (params.items.length > MAX_ITEMS) throw new BookingError("Demasiados servicios en una misma reserva");
   for (const item of params.items) {
     if (!isValidDateStr(item.date) || !Number.isInteger(item.minutes)) throw new BookingError("Horario inválido");
@@ -209,6 +242,7 @@ export async function createOnlineBooking(params: {
 
     const client = await upsertClientForUser(tx, business.id, params.user);
     if (client.isBlocked) throw new BookingError("No podés reservar turnos en este negocio. Contactalo directamente.");
+    await enforceActiveLimit(tx, business, client.id, params.items.length, now);
 
     const coupon = params.couponCode ? await findValidCoupon(tx, business.id, params.couponCode, now) : null;
     const pricing = priceBooking(

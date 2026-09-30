@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { FormMessage, Section, WeekdayPicker } from "@/components/panel-ui";
-import { Checkbox, Field, Input, Select, SubmitButton, Textarea } from "@/components/ui";
+import { Checkbox, Field, Input, Select, SubmitButton, Textarea, ActionForm } from "@/components/ui";
 import type { Service } from "@/db/schema";
 import { saveServiceAction, type ActionState } from "../actions";
 
@@ -27,7 +27,7 @@ export function ServiceForm({
   const [assigned, setAssigned] = useState(new Set(professionals.filter((p) => p.assigned || !service).map((p) => p.id)));
 
   return (
-    <form action={action} className="space-y-5">
+    <ActionForm action={action} className="space-y-5">
       {service && <input type="hidden" name="id" value={service.id} />}
       {first && <input type="hidden" name="first" value="1" />}
 
@@ -135,6 +135,6 @@ export function ServiceForm({
       <div className="flex justify-end">
         <SubmitButton>{service ? "Guardar cambios" : "Crear servicio"}</SubmitButton>
       </div>
-    </form>
+    </ActionForm>
   );
 }

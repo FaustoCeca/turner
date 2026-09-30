@@ -36,6 +36,8 @@ export const users = pgTable("users", {
   phone: text("phone"),
   // Hash del código de recuperación (reemplaza al email para restablecer la contraseña).
   recoveryCodeHash: text("recovery_code_hash"),
+  // Operador de la plataforma (acceso a /admin). Se otorga sólo con `npm run admin -- grant <email>`.
+  isPlatformAdmin: boolean("is_platform_admin").notNull().default(false),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
@@ -96,6 +98,8 @@ export const businesses = pgTable("businesses", {
   // Minutos de cada hora en los que puede empezar un turno (ej. [0, 15, 30, 45]).
   slotMinutes: jsonb("slot_minutes").$type<number[]>().notNull().default([0, 15, 30, 45]),
   holdMinutes: integer("hold_minutes").notNull().default(15),
+  // Turnos futuros que puede tener reservados online un mismo cliente (0 = sin límite).
+  maxActiveBookingsPerClient: integer("max_active_bookings_per_client").notNull().default(3),
 
   // Mercado Pago (tokens cifrados con APP_SECRET)
   mpUserId: text("mp_user_id"),
@@ -418,6 +422,29 @@ export const payments = pgTable(
   },
   (t) => [uniqueIndex("payments_provider_external_unique").on(t.provider, t.externalId)],
 );
+
+/** Imágenes subidas (logos y fotos). Se guardan en la base para no depender de otro servicio. */
+export const images = pgTable(
+  "images",
+  {
+    id: id(),
+    businessId: text("business_id")
+      .notNull()
+      .references(() => businesses.id, { onDelete: "cascade" }),
+    contentType: text("content_type").notNull(),
+    // Base64: funciona igual con postgres-js y PGlite. Las imágenes llegan achicadas (máx. ~300 KB).
+    data: text("data").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("images_business_idx").on(t.businessId)],
+);
+
+/** Contadores de intentos (login, registro, reservas…). La clave se guarda hasheada. */
+export const rateLimits = pgTable("rate_limits", {
+  key: text("key").primaryKey(),
+  count: integer("count").notNull(),
+  resetAt: tstz("reset_at").notNull(),
+});
 
 /** Novedades para el panel del negocio (reemplazan los emails al dueño). */
 export const notifications = pgTable(

@@ -70,6 +70,9 @@ export function BusinessShell({
                 <Link href="/mis-turnos" className="block px-4 py-2.5 hover:bg-neutral-50">
                   Mis turnos
                 </Link>
+                <Link href="/cuenta" className="block px-4 py-2.5 hover:bg-neutral-50">
+                  Mi cuenta
+                </Link>
                 <form action={logoutAction}>
                   <input type="hidden" name="next" value={`/${business.slug}`} />
                   <button className="block w-full px-4 py-2.5 text-left hover:bg-neutral-50">Cerrar sesión</button>

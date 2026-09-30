@@ -38,6 +38,7 @@ Usuarios de la demo (contraseña `demo1234`, código de recuperación `DEMO-2345
 | --- | --- | --- |
 | Negocio | `negocio@demo.test` | http://localhost:3000/panel |
 | Cliente | `cliente@demo.test` | http://localhost:3000/barberia-demo |
+| Operador | `admin@demo.test` | http://localhost:3000/admin |
 
 Cupón de prueba: `BIENVENIDA` (10 %). En desarrollo las señas se pagan con un **checkout simulado**. Para probar Mercado Pago real, vinculá un Access Token `TEST-…` en *Configuración → Mercado Pago*.
 
@@ -51,6 +52,7 @@ Cupón de prueba: `BIENVENIDA` (10 %). En desarrollo las señas se pagan con un 
 | `npm run db:generate` | Genera una migración a partir de `src/db/schema.ts` |
 | `npm run db:migrate` | Aplica migraciones sobre `DATABASE_URL` |
 | `npm run db:seed` | Carga la demo |
+| `npm run admin -- grant <email>` | Da acceso a `/admin` (también `revoke`, y `reset` para generar un código de recuperación) |
 
 ## Producción: Vercel (plan gratuito) + Postgres en tu VPS
 
@@ -66,9 +68,7 @@ sudo -u postgres psql -c "CREATE USER turnero WITH PASSWORD 'UNA-CLAVE-LARGA';" 
   `hostssl turnero turnero 0.0.0.0/0 scram-sha-256`
   Vercel no tiene IPs fijas en el plan gratuito, así que no se puede restringir por IP: la protección es TLS + contraseña larga.
 - Abrir el puerto: `sudo ufw allow 5432/tcp` y `sudo systemctl restart postgresql`.
-- **Backups**: sin base administrada, los backups son tuyos. Por ejemplo, con un cron diario:
-  `pg_dump -Fc turnero > /backups/turnero-$(date +%F).dump`
-  Además, copialos fuera del VPS.
+- **Backups**: sin base administrada, los backups son tuyos. Usá `ops/backup-postgres.sh`: hace un backup diario comprimido, guarda los últimos 14 días y, si configurás [rclone](https://rclone.org) con un remoto llamado `backups`, lo copia fuera del VPS. Las instrucciones de instalación, restauración y prueba están al principio del script. **Probá restaurar un backup al menos una vez.**
 
 ### 2. Variables en Vercel
 
@@ -79,12 +79,18 @@ sudo -u postgres psql -c "CREATE USER turnero WITH PASSWORD 'UNA-CLAVE-LARGA';" 
 
 ### 3. Migraciones y región
 
-- Desde tu máquina: `DATABASE_URL=... npm run db:migrate`.
+- Se aplican solas en cada deploy de **producción**: `vercel.json` corre `npm run db:migrate` antes del build. En las vistas previas (ramas, PR) no se aplican, para que un cambio a medio terminar no toque la base real.
+- También podés aplicarlas a mano: `DATABASE_URL=... npm run db:migrate`.
 - En Vercel: *Settings → Functions → Function Region*, elegí la región **más cercana a tu VPS** (cada página hace varias consultas a la base).
+
+### 4. Tu usuario de operador
+
+Registrate en la app como cualquier usuario y después, con `DATABASE_URL` apuntando a producción:
+`npm run admin -- grant tu@email.com`. Eso te habilita **/admin**, donde ves todos los negocios (dueño, estado de la prueba, profesionales, turnos del mes, Mercado Pago) y podés **rescatar el acceso** de un usuario: generás un código de recuperación nuevo y se lo mandás por WhatsApp. Si perdés el acceso a tu propia cuenta: `npm run admin -- reset tu@email.com`.
 
 ### Notas del plan gratuito de Vercel
 
-- Los cron corren **una vez por día**: `vercel.json` programa `/api/cron` a las 9 UTC para limpiar reservas vencidas. Igual, las páginas liberan las reservas sin pagar al cargarse, así que no depende del cron.
+- Los cron corren **una vez por día**: `vercel.json` programa `/api/cron` a las 9 UTC. Libera reservas vencidas y borra sesiones vencidas, contadores de intentos viejos e imágenes subidas que no se usaron. Las páginas también liberan las reservas sin pagar al cargarse, así que no depende del cron.
 - El plan Hobby de Vercel está pensado para uso personal/no comercial. Cuando empieces a cobrar suscripciones conviene pasar a Pro o correr la app en tu VPS.
 
 ### Mercado Pago
@@ -93,6 +99,14 @@ sudo -u postgres psql -c "CREATE USER turnero WITH PASSWORD 'UNA-CLAVE-LARGA';" 
 - **Redirect URI de OAuth**: `https://TU-PROYECTO.vercel.app/api/mercadopago/callback`.
 - **Webhooks**: `https://TU-PROYECTO.vercel.app/api/webhooks/mercadopago`, eventos *Pagos* y *Planes y suscripciones*. El webhook nunca confía en el cuerpo recibido: vuelve a consultar el pago a la API de Mercado Pago y aplicarlo es idempotente.
 - **Suscripciones de los negocios**: se crean con `MP_PLATFORM_ACCESS_TOKEN`. Los precios están en `src/lib/plans.ts`.
+
+## Seguridad y límites
+
+- **Intentos**: login, registro, recuperación de contraseña y reservas tienen límite de intentos guardado en la base (vale para todas las instancias de Vercel). Las claves (email, IP) se guardan hasheadas.
+- **Reservas por cliente**: cada negocio define cuántos turnos futuros puede tener reservados un mismo cliente online (3 por defecto; 0 = sin límite). Evita que alguien llene la agenda con reservas falsas.
+- **Teléfono obligatorio** al registrarse: sin emails, es el único canal para avisos y recordatorios.
+- **Imágenes**: logos y fotos se achican en el navegador (400×400) y se guardan en la base. El servidor verifica el tipo real del archivo por sus primeros bytes (sólo JPG, PNG o WEBP).
+- **Cuenta del cliente** (*Mi cuenta*): editar datos (se actualizan en los negocios donde reservó), cambiar contraseña (cierra las otras sesiones), generar un código de recuperación nuevo y eliminar la cuenta.
 
 ## Cómo funciona la agenda
 

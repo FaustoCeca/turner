@@ -3,7 +3,7 @@
 import { MapPin, Pencil, Plus } from "lucide-react";
 import { useActionState, useEffect, useState } from "react";
 import { FormMessage } from "@/components/panel-ui";
-import { Badge, Button, Checkbox, Field, Input, Modal, SubmitButton } from "@/components/ui";
+import { Badge, Button, Checkbox, Field, Input, Modal, SubmitButton, ActionForm } from "@/components/ui";
 import type { Branch } from "@/db/schema";
 import { deleteBranchAction, saveBranchAction, type ActionState } from "../actions";
 
@@ -48,7 +48,7 @@ function BranchForm({ branch, onDone }: { branch: Branch | null; onDone: () => v
 
   return (
     <>
-      <form action={action} className="space-y-3">
+      <ActionForm action={action} className="space-y-3">
         {branch && <input type="hidden" name="id" value={branch.id} />}
         <Field label="Nombre (opcional)">
           <Input name="name" defaultValue={branch?.name ?? ""} placeholder="Ej: Centro" />
@@ -76,7 +76,7 @@ function BranchForm({ branch, onDone }: { branch: Branch | null; onDone: () => v
         <Checkbox name="isActive" defaultChecked={branch?.isActive ?? true} label="Activa (visible para reservar)" />
         <FormMessage state={state} />
         <SubmitButton className="w-full">Guardar</SubmitButton>
-      </form>
+      </ActionForm>
       {branch && (
         <form action={deleteBranchAction} className="mt-4 text-center">
           <input type="hidden" name="id" value={branch.id} />

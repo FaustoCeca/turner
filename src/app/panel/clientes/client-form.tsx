@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect } from "react";
 import { FormMessage } from "@/components/panel-ui";
-import { Checkbox, Field, Input, SubmitButton, Textarea } from "@/components/ui";
+import { Checkbox, Field, Input, SubmitButton, Textarea, ActionForm } from "@/components/ui";
 import type { Client } from "@/db/schema";
 import { saveClientAction, type ActionState } from "../actions";
 
@@ -14,7 +14,7 @@ export function ClientForm({ client, onSaved }: { client: Client | null; onSaved
   }, [state]);
 
   return (
-    <form action={action} className="grid gap-3 sm:grid-cols-2">
+    <ActionForm action={action} className="grid gap-3 sm:grid-cols-2">
       {client && <input type="hidden" name="id" value={client.id} />}
       <Field label="Nombre">
         <Input name="firstName" defaultValue={client?.firstName} required />
@@ -39,6 +39,6 @@ export function ClientForm({ client, onSaved }: { client: Client | null; onSaved
       <div className="flex justify-end sm:col-span-2">
         <SubmitButton>Guardar</SubmitButton>
       </div>
-    </form>
+    </ActionForm>
   );
 }

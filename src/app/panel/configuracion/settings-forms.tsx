@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import { CATEGORIES } from "@/app/negocio/nuevo/onboarding-form";
+import { ImageUpload } from "@/components/image-upload";
 import { FormMessage, Section } from "@/components/panel-ui";
-import { Alert, Badge, Button, Checkbox, Field, Input, Select, SubmitButton, Textarea } from "@/components/ui";
+import { Alert, Badge, Button, Checkbox, Field, Input, Select, SubmitButton, Textarea, ActionForm } from "@/components/ui";
 import type { PublicBusiness } from "@/lib/public";
 import {
   disconnectMpAction,
@@ -27,6 +28,7 @@ type Settings = PublicBusiness & {
   refundMinAnticipationMinutes: number;
   slotMinutes: number[];
   holdMinutes: number;
+  maxActiveBookingsPerClient: number;
   depositPercent: number;
   depositMinAmount: number;
   mpConnected: boolean;
@@ -115,7 +117,7 @@ export function SettingsForms({
       </nav>
 
       <Section id="general" title="Datos del negocio">
-        <form action={generalAction} className="grid gap-4 sm:grid-cols-2">
+        <ActionForm action={generalAction} className="grid gap-4 sm:grid-cols-2">
           <Field label="Nombre">
             <Input name="name" defaultValue={b.name} required />
           </Field>
@@ -133,9 +135,9 @@ export function SettingsForms({
           <Field label="Frase o slogan">
             <Input name="slogan" defaultValue={b.slogan ?? ""} />
           </Field>
-          <Field label="Logo (URL https)" className="sm:col-span-2">
-            <Input name="logoUrl" type="url" defaultValue={b.logoUrl ?? ""} placeholder="https://…/logo.png" />
-          </Field>
+          <div className="sm:col-span-2">
+            <ImageUpload name="logoUrl" defaultValue={b.logoUrl} label="Logo" />
+          </div>
           <Field label="WhatsApp">
             <Input name="whatsapp" defaultValue={b.whatsapp ?? ""} placeholder="+54 9 341 123 4567" />
           </Field>
@@ -161,11 +163,11 @@ export function SettingsForms({
           <div className="flex justify-end sm:col-span-2">
             <SubmitButton>Guardar datos</SubmitButton>
           </div>
-        </form>
+        </ActionForm>
       </Section>
 
       <Section id="apariencia" title="Apariencia" description="Colores de tu página de reservas.">
-        <form action={appearanceAction} className="grid gap-5 md:grid-cols-[1fr_280px]">
+        <ActionForm action={appearanceAction} className="grid gap-5 md:grid-cols-[1fr_280px]">
           <div className="space-y-3">
             {(
               [
@@ -204,10 +206,10 @@ export function SettingsForms({
               </div>
             </div>
           </div>
-        </form>
+        </ActionForm>
       </Section>
 
-      <form action={bookingAction} className="space-y-5">
+      <ActionForm action={bookingAction} className="space-y-5">
         <Section id="reservas" title="Reservas online">
           <div className="grid gap-4 sm:grid-cols-2">
             <Checkbox name="isOnline" defaultChecked={b.isOnline} label="Aceptar reservas online" hint="Si lo desactivás, tu página muestra que las reservas están pausadas." />
@@ -227,6 +229,9 @@ export function SettingsForms({
             </Field>
             <Field label="Tiempo para pagar la seña (minutos)" hint="Durante ese tiempo el horario queda reservado.">
               <Input name="holdMinutes" type="number" min={5} max={120} defaultValue={b.holdMinutes} />
+            </Field>
+            <Field label="Turnos futuros por cliente" hint="Cuántos turnos puede tener reservados a la vez un mismo cliente online. 0 = sin límite.">
+              <Input name="maxActiveBookingsPerClient" type="number" min={0} max={50} defaultValue={b.maxActiveBookingsPerClient} />
             </Field>
           </div>
         </Section>
@@ -273,7 +278,7 @@ export function SettingsForms({
         <div className="flex justify-end">
           <SubmitButton>Guardar configuración de reservas</SubmitButton>
         </div>
-      </form>
+      </ActionForm>
 
       <Section id="mercadopago" title="Mercado Pago" description="Las señas se acreditan directamente en tu cuenta. No cobramos comisión.">
         {mpStatus === "ok" && <div className="mb-3"><Alert tone="green">¡Cuenta vinculada!</Alert></div>}
@@ -307,10 +312,10 @@ export function SettingsForms({
               <p className="mt-2 text-neutral-600">
                 Copiá tu Access Token desde <i>Mercado Pago Developers → Tus integraciones → Credenciales de producción</i>. Para pruebas podés usar uno que empiece con TEST-.
               </p>
-              <form action={mpAction} className="mt-3 flex flex-wrap gap-2">
+              <ActionForm action={mpAction} className="mt-3 flex flex-wrap gap-2">
                 <Input name="accessToken" placeholder="APP_USR-…" className="flex-1" autoComplete="off" required />
                 <SubmitButton>Vincular</SubmitButton>
-              </form>
+              </ActionForm>
               <div className="mt-2">
                 <FormMessage state={mp} />
               </div>
@@ -337,7 +342,7 @@ export function SettingsForms({
               </Link>
             </p>
             {isOwner && (
-              <form action={subAction} className="flex flex-wrap items-end gap-3">
+              <ActionForm action={subAction} className="flex flex-wrap items-end gap-3">
                 <Field label="Plan">
                   <Select name="plan" defaultValue="profesional">
                     {PLANS.map((p) => (
@@ -351,7 +356,7 @@ export function SettingsForms({
                   <Input name="professionals" type="number" min={1} defaultValue={1} className="w-24" />
                 </Field>
                 <SubmitButton>Suscribirme</SubmitButton>
-              </form>
+              </ActionForm>
             )}
             <FormMessage state={sub} />
           </div>

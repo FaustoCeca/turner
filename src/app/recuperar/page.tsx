@@ -6,7 +6,7 @@ import { useActionState } from "react";
 import { resetWithRecoveryCodeAction, type AuthState } from "@/app/actions/auth";
 import { AuthShell } from "@/components/auth-shell";
 import { RecoveryCodeNotice } from "@/components/recovery-code-notice";
-import { Alert, Field, Input, SubmitButton } from "@/components/ui";
+import { Alert, Field, Input, SubmitButton, ActionForm } from "@/components/ui";
 
 export default function ForgotPasswordPage() {
   const [state, action] = useActionState<AuthState, FormData>(resetWithRecoveryCodeAction, {});
@@ -23,7 +23,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <AuthShell title="Recuperar contraseña" subtitle="Usá el código de recuperación que guardaste al crear tu cuenta.">
-      <form action={action} className="space-y-3">
+      <ActionForm action={action} className="space-y-3">
         <Field label="Email">
           <Input name="email" type="email" autoComplete="email" required />
         </Field>
@@ -35,7 +35,7 @@ export default function ForgotPasswordPage() {
         </Field>
         {state.error && <Alert>{state.error}</Alert>}
         <SubmitButton className="w-full">Cambiar contraseña</SubmitButton>
-      </form>
+      </ActionForm>
       <p className="mt-4 text-center text-sm text-neutral-600">
         ¿Te acordaste?{" "}
         <Link href="/login" className="underline">
